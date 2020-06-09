@@ -47,29 +47,28 @@ public class TriangleStep1 extends Configured implements Tool {
         return 0;
     }
 
-    public static class TS1Map extends Mapper<LongWritable, Text, IntWritable, IntWritable> {
+    public static class TS1Map extends Mapper<Object, Text, IntWritable, IntWritable> {
 
         IntWritable ov = new IntWritable();
         IntWritable ou = new IntWritable();
 
         @Override
-        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-            String k = key.toString();
-            StringTokenizer st = new StringTokenizer(k);
+        protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 
-            if (st.hasMoreTokens()) ov.set(Integer.parseInt(st.nextToken()));
-            if (st.hasMoreTokens()) ou.set(Integer.parseInt(st.nextToken()));
+            StringTokenizer st = new StringTokenizer(value.toString());
 
-            if (ov.get() > ou.get()) context.write(ou, ov);
+            ov.set(Integer.parseInt(st.nextToken()));
+            ou.set(Integer.parseInt(st.nextToken()));
+
+            if (ou.get() < ov.get()) context.write(ou, ov);
             else context.write(ov, ou);
-
+//            System.out.println(ov.get() + " " + ou.get());
         }
     }
 
     public static class TS1Reduce extends Reducer<IntWritable, IntWritable, IntPairWritable, IntWritable> {
 
         IntPairWritable ok = new IntPairWritable();
-        IntWritable ov = new IntWritable();
 
         @Override
         protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
@@ -83,7 +82,8 @@ public class TriangleStep1 extends Configured implements Tool {
                 for (Integer neighbor : neighbors) {
                     if (neighbors.get(i) < neighbor) {
                         ok.set(neighbors.get(i), neighbor);
-                        context.write(ok, ov);
+//                        System.out.println(ok.toString() + " " + key.toString());
+                        context.write(ok, key);
                     }
                 }
             }

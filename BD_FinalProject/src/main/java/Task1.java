@@ -17,7 +17,8 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.StringTokenizer;
 
-public class Task1_SimpleGraph extends Configured implements Tool {
+public class Task1 extends Configured implements Tool {
+
 
     @Override
     public int run(String[] args) throws Exception {
@@ -37,8 +38,8 @@ public class Task1_SimpleGraph extends Configured implements Tool {
         job.setMapOutputKeyClass(IntPairWritable.class);
         job.setMapOutputValueClass(NullWritable.class);
 
-        job.setOutputKeyClass(IntPairWritable.class);
-        job.setOutputValueClass(NullWritable.class);
+        job.setOutputKeyClass(IntWritable.class);
+        job.setOutputValueClass(IntWritable.class);
 
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
@@ -46,7 +47,7 @@ public class Task1_SimpleGraph extends Configured implements Tool {
         FileInputFormat.addInputPath(job, new Path(input));
         FileOutputFormat.setOutputPath(job, new Path(output));
 
-        job. waitForCompletion(true);
+        job.waitForCompletion(true);
 
         return 0;
     }
@@ -71,13 +72,16 @@ public class Task1_SimpleGraph extends Configured implements Tool {
         }
     }
 
-    public static class RemoveDuplicateEdgeReducer extends Reducer<IntPairWritable, NullWritable, IntPairWritable, NullWritable> {
+    public static class RemoveDuplicateEdgeReducer extends Reducer<IntPairWritable, NullWritable, IntWritable, IntWritable> {
 
-        NullWritable ov = NullWritable.get();
+        IntWritable ok = new IntWritable();
+        IntWritable ov = new IntWritable();
 
-         @Override
+        @Override
         protected void reduce(IntPairWritable key, Iterable<NullWritable> values, Context context) throws IOException, InterruptedException {
-            context.write(key, ov);
+            ok.set(key.u);
+            ov.set(key.v);
+            context.write(ok, ov);
         }
     }
 }

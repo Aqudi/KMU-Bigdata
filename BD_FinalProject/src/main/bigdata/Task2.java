@@ -22,6 +22,9 @@ import java.util.StringTokenizer;
 
 public class Task2 extends Configured implements Tool {
 
+    public static void main(String[] args) throws Exception {
+        ToolRunner.run(new Task2(), args);
+    }
 
     @Override
     public int run(String[] args) throws Exception {
@@ -92,7 +95,7 @@ public class Task2 extends Configured implements Tool {
             // U, V 를 기준으로 모인 Value 의 개수를 센다.
             int count = 0;
             // System.out.println(key.get());
-            for(IntWritable value : values) {
+            for (IntWritable value : values) {
                 count += 1;
             }
 

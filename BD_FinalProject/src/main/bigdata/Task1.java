@@ -15,12 +15,16 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
 
 public class Task1 extends Configured implements Tool {
 
+    public static void main(String[] args) throws Exception {
+        ToolRunner.run(new Task1(), args);
+    }
 
     @Override
     public int run(String[] args) throws Exception {
@@ -69,7 +73,7 @@ public class Task1 extends Configured implements Tool {
             // 토크나이저로 Text 파일을 받아와 메타 정보를 필터링하고 Edge 를 emit
             StringTokenizer st = new StringTokenizer(value.toString());
             String su = st.nextToken();
-            if(su.startsWith("%") || su.startsWith("#")){
+            if (su.startsWith("%") || su.startsWith("#")) {
                 return;
             }
 

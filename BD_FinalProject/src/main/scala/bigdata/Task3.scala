@@ -3,7 +3,6 @@ package bigdata
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.{SparkConf, SparkContext}
 
-
 object Task3 {
 
   def main(args: Array[String]): Unit = {
@@ -12,9 +11,9 @@ object Task3 {
     val output = args(2)
 
     //  Spark settings
-    val conf = new SparkConf().setAppName("Final project app") // .setMaster("local")
+    val conf = new SparkConf().setAppName("Final project app").setMaster("local")
     val sc = new SparkContext(conf)
-    sc.hadoopConfiguration.set("mapreduce.input.fileinputformat.input.dir.recursive", "true")
+//    sc.hadoopConfiguration.set("mapreduce.input.fileinputformat.input.dir.recursive", "true")
 
     /* Degree 정보를 사용해서 정렬할 수 있도록 세팅 */
     //    val degree_db = sc.textFile(degrees + "/*")
@@ -22,6 +21,11 @@ object Task3 {
     //      .map(a => (a(0), a(1)))
     //      .toDF("vertex", "degree")
     //      .cache()
+
+    println(s"\nInput: $input")
+    println(s"Input2: $degrees")
+    println(s"Output: $output\n")
+
 
     /* Step 1 : Edge 불러와서 Wedge 찾기 */
     println("Step 1: Start")

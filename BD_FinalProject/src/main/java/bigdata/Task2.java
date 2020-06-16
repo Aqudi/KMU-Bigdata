@@ -40,7 +40,7 @@ public class Task2 extends Configured implements Tool {
 
         Job job = Job.getInstance(conf);
 
-        job.setJarByClass(DegreeComputeMapper.class);
+        job.setJarByClass(Task2.class);
 
         job.setMapperClass(DegreeComputeMapper.class);
         job.setReducerClass(DegreeComputeReducer.class);

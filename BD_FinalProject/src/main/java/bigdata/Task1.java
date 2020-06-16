@@ -40,7 +40,7 @@ public class Task1 extends Configured implements Tool {
 
         Job job = Job.getInstance(conf);
 
-        job.setJarByClass(RemoveDuplicateEdgeMapper.class);
+        job.setJarByClass(Task1.class);
 
         job.setMapperClass(RemoveDuplicateEdgeMapper.class);
         job.setReducerClass(RemoveDuplicateEdgeReducer.class);

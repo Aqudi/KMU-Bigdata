@@ -1,3 +1,4 @@
+import bigdata.Task2;
 import org.apache.hadoop.util.ToolRunner;
 
 public class Task2Test {

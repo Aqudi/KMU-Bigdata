@@ -1,3 +1,5 @@
+package bigdata;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -17,7 +19,7 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.StringTokenizer;
 
-public class Task1 extends Configured implements Tool {
+public class Task2 extends Configured implements Tool {
 
 
     @Override
@@ -30,16 +32,16 @@ public class Task1 extends Configured implements Tool {
 
         Job job = Job.getInstance(conf);
 
-        job.setJarByClass(RemoveDuplicateEdgeMapper.class);
+        job.setJarByClass(DegreeComputeMapper.class);
 
-        job.setMapperClass(RemoveDuplicateEdgeMapper.class);
-        job.setReducerClass(RemoveDuplicateEdgeReducer.class);
+        job.setMapperClass(DegreeComputeMapper.class);
+        job.setReducerClass(DegreeComputeReducer.class);
 
-        job.setMapOutputKeyClass(IntPairWritable.class);
-        job.setMapOutputValueClass(NullWritable.class);
+        job.setMapOutputKeyClass(IntWritable.class);
+        job.setMapOutputValueClass(IntWritable.class);
 
-        job.setOutputKeyClass(IntWritable.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputKeyClass(IntPairWritable.class);
+        job.setOutputValueClass(NullWritable.class);
 
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
@@ -52,35 +54,38 @@ public class Task1 extends Configured implements Tool {
         return 0;
     }
 
-    public static class RemoveDuplicateEdgeMapper extends Mapper<Object, Text, IntPairWritable, NullWritable> {
+    public static class DegreeComputeMapper extends Mapper<Object, Text, IntWritable, IntWritable> {
 
-        IntPairWritable ok = new IntPairWritable();
-        NullWritable ov = NullWritable.get();
+        IntWritable ou = new IntWritable();
+        IntWritable ov = new IntWritable();
 
         @Override
         protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 
             StringTokenizer st = new StringTokenizer(value.toString());
-            int u = Integer.parseInt(st.nextToken());
-            int v = Integer.parseInt(st.nextToken());
 
-            // self-loop 제거
-            if (u < v) ok.set(u, v);
-            else if (u > v) ok.set(v, u);
+            ou.set(Integer.parseInt(st.nextToken()));
+            ov.set(Integer.parseInt(st.nextToken()));
 
-            context.write(ok, ov);
+            context.write(ou, ov);
+            context.write(ov, ou);
         }
     }
 
-    public static class RemoveDuplicateEdgeReducer extends Reducer<IntPairWritable, NullWritable, IntWritable, IntWritable> {
+    public static class DegreeComputeReducer extends Reducer<IntWritable, IntWritable, IntPairWritable, NullWritable> {
 
-        IntWritable ok = new IntWritable();
-        IntWritable ov = new IntWritable();
+        NullWritable ov = NullWritable.get();
+        IntPairWritable ok = new IntPairWritable();
 
         @Override
-        protected void reduce(IntPairWritable key, Iterable<NullWritable> values, Context context) throws IOException, InterruptedException {
-            ok.set(key.u);
-            ov.set(key.v);
+        protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            int count = 0;
+
+            for(IntWritable value : values) {
+                count += 1;
+            }
+
+            ok.set(key.get(), count);
             context.write(ok, ov);
         }
     }

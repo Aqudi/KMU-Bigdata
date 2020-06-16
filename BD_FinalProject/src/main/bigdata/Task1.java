@@ -2,6 +2,7 @@ package bigdata;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -23,11 +24,15 @@ public class Task1 extends Configured implements Tool {
 
     @Override
     public int run(String[] args) throws Exception {
-
-        String input = args[0];
-        String output = args[1];
-
         Configuration conf = getConf();
+
+        Path input = new Path(args[0]);
+        Path output = new Path(args[1]);
+
+        FileSystem fs = FileSystem.get(conf);
+        if (fs.exists(output)) {
+            fs.delete(output, true);
+        }
 
         Job job = Job.getInstance(conf);
 
@@ -45,8 +50,8 @@ public class Task1 extends Configured implements Tool {
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
-        FileInputFormat.addInputPath(job, new Path(input));
-        FileOutputFormat.setOutputPath(job, new Path(output));
+        FileInputFormat.addInputPath(job, input);
+        FileOutputFormat.setOutputPath(job, output);
 
         job.waitForCompletion(true);
 
@@ -61,14 +66,21 @@ public class Task1 extends Configured implements Tool {
         @Override
         protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 
+            // 토크나이저로 Text 파일을 받아와 메타 정보를 필터링하고 Edge 를 emit
             StringTokenizer st = new StringTokenizer(value.toString());
-            int u = Integer.parseInt(st.nextToken());
+            String su = st.nextToken();
+            if(su.startsWith("%") || su.startsWith("#")){
+                return;
+            }
+
+            int u = Integer.parseInt(su);
             int v = Integer.parseInt(st.nextToken());
 
             // self-loop 제거
             if (u < v) ok.set(u, v);
             else if (u > v) ok.set(v, u);
 
+            // IntPairWritable 로 Key 를 잡아 Edge 기준으로 Grouping 되도록 한다.
             context.write(ok, ov);
         }
     }
@@ -80,6 +92,9 @@ public class Task1 extends Configured implements Tool {
 
         @Override
         protected void reduce(IntPairWritable key, Iterable<NullWritable> values, Context context) throws IOException, InterruptedException {
+
+            // Edge 기준으로 Grouping 했으므로 그대로 출력해준다.
+            // 같은 Edge 들은 Key 로 묶였으니 바로 write 해주면 된다.
             ok.set(key.u);
             ov.set(key.v);
             context.write(ok, ov);

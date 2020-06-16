@@ -11,5 +11,7 @@ libraryDependencies ++= Seq(
   "log4j" % "log4j" % "1.2.17",
 )
 
-// https://mvnrepository.com/artifact/org.apache.spark/spark-core
-libraryDependencies += "org.apache.spark" %% "spark-core" % "3.0.0-preview2"
+libraryDependencies ++= Seq(
+  "org.apache.spark" %% "spark-core" % "3.0.0-preview2",
+  "org.apache.spark" %% "spark-sql" % "3.0.0-preview2",
+)

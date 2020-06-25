@@ -9,11 +9,19 @@ object Task3 {
     val input = args(0)
     val input2 = args(1)
     val output = args(2)
+    val temp = output + ".tmp"
+
+    var master = "yarn"
+    if (args.length >= 4) {
+      if (args(3).equals("local")) {
+        master = "local";
+      }
+    }
 
     //  Spark settings
     val conf = new SparkConf()
       .setAppName("Final project app")
-      .setMaster("local")
+      .setMaster(master)
     val sc = new SparkContext(conf)
 
 
@@ -25,8 +33,12 @@ object Task3 {
     // 만약 이전 결과가 남아있다면 제거
     val fs = FileSystem.get(sc.hadoopConfiguration)
     val outputPath = new Path(output)
+    val tempPath = new Path(temp)
     if (fs.exists(outputPath)) {
       fs.delete(outputPath, true)
+    }
+    if (fs.exists(tempPath)) {
+      fs.delete(tempPath, true)
     }
 
     /* Step 1 : Edge 불러와서 Wedge 만들기 */
@@ -37,29 +49,30 @@ object Task3 {
     val edges = sc.textFile(input)
       .map(_.split("\t"))
       .map(x => (x(0).toInt, x(1).toInt))
+      .repartition(120)
     val degress = sc.textFile(input2)
       .map(_.split("\t"))
       .map(x => (x(0).toInt, x(1).toInt))
+      .repartition(120)
 
     val edgeWithDegree = degress
       .join(edges)
       .map { case (u, (ud, v)) => (v, (u, ud)) }
-      .join(degress)
+      .join(degress, 120)
       .map { case (v, ((u, ud), vd)) => ((u, ud), (v, vd)) }
       .map { case (u, v) =>
-        if (u._2 < v._2) (u, v)
-        else if (u._2 == v._2 && u._1 < v._1) (u, v)
+        if (u._2 < v._2 || (u._2 == v._2 && u._1 < v._1)) (u, v)
         else (v, u)
       }
 
     // 하둡에서 처럼 방출된 Edge 들을 Key 노드를 기준으로 묶어준 준뒤
     // Key 노드 중심으로 모인 노드들 중 중복되지 않게 2개를 뽑아 Wedge 로 만들어준다.
-    val wedges = edgeWithDegree
+    val wedges_save = edgeWithDegree
       .groupByKey()
-      .map {
-        case ((u, ud), vs) =>
+      .flatMap {
+        case (u, vs) =>
           val values = vs.toList
-          val result = for {
+          for {
             i <- values.indices
             j <- i + 1 until values.size
           } yield {
@@ -67,53 +80,38 @@ object Task3 {
             // 마지막 Triangle 을 세기 위해 edges(Task1에서 이미 정렬되있는 상태)
             // 와 똑같이 숫자 그대로 순서로 정렬해준다.
             val vw = (values(i)._1, values(j)._1)
-            if (values(i)._1 > values(j)._1) {
-              (vw.swap, u)
-            } else {
-              (vw, u)
-            }
+            if (vw._1 < vw._2) (vw, u._1)
+            else (vw.swap, u._1)
           }
-          //          result.foreach(println)
-          result
       }
-      .flatMap(v => v)
       .groupByKey()
-      .repartition(100)
-    println(s"wedges: ${wedges.count()}")
+    wedges_save
+      .map { case ((u, v), ws) => u + "\t" + v + "\t" + ws.mkString("\t") }
+      .saveAsTextFile(temp)
     println("Step 1: End\n")
+    println(s"wedges: ${wedges_save.count()}")
 
     /* Step 2 : Wedge 와 Edge 를 모두 Input 으로 받아 삼각형 찾기 */
     println("Step 2: Start")
-    // Wedge 를 기준으로 노드들을 모아 Wedge 를 닫아 삼각형을 만들 수 있는지 확인한다.
-    val triangles = edges
-      .map { case (u, v) => ((u, v), Iterable(-1)) }
-      .union(wedges)
-      .groupByKey()
-      .flatMap {
-        tri =>
-          val centers = tri._2.flatten
-          val emit = centers.exists(x => x == -1)
-          val c_vs = centers.filter(x => x != -1).toList
-          val joined = for {
-            i <- c_vs.indices
-            if emit
-          } yield IndexedSeq(tri._1._1, tri._1._2, c_vs(i))
-          joined
-      }
+    val wedges = sc.textFile(temp)
+      .map(_.split("\t"))
+      .map { x => ((x(0).toInt, x(1).toInt), x.slice(2, x.length).toSeq) }
+
+    // Wedge 를 기준으로 노드들을 모아  Wedge 를 닫아 삼각형을 만들 수 있는지 확인한다.
+    val triangles = edges.map { case (u, v) => ((u, v), Seq(-1)) }
+      .join(wedges, 120)
+      .flatMapValues(x => x._2)
+    // triangles.foreach(println)
     println("Step 2: End\n")
 
-    println("Step 3: Start\n")
+    println("Step 3: Start")
     val counted = triangles
-      .flatMap(x => x)
+      .flatMap(x => Seq(x._1._1, x._1._2, x._2))
       .countByValue()
     val counted_save = counted.map(_.productIterator.mkString("\t")).toSeq.sortBy(x => x.split("\t")(0).toInt)
     sc.parallelize(counted_save).saveAsTextFile(output)
-    //    println("삼각형: " + counted.values.sum / 3 + "개")
     println("삼각형: " + triangles.count() + "개")
     println("Step 3: End\n")
-
-    // 총 삼각형 개수 출력
-    // facebook: 1612010개
   }
 
 }

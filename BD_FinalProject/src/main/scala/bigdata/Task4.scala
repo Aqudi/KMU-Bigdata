@@ -46,7 +46,7 @@ object Task4 {
 
     // 군집계수 = 삼각형수 * 2 / 이웃한노드수 * (이웃한노드수-1)
     val cc = v_t.join(v_d)
-      .map{ case (v, (t, d)) => (v, t * 2 / d * (d-1))}
+      .map{ case (v, (t, d)) => (v, (t.toDouble * 2) / (d.toDouble * (d.toDouble - 1)))}
       .sortByKey()
       .map{ case (v, cc) => s"$v\t$cc"}
       .coalesce(1)

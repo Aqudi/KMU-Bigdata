@@ -81,9 +81,12 @@ public class Task1 extends Configured implements Tool {
             int v = Integer.parseInt(st.nextToken());
 
             // self-loop 제거
-            if (u < v) ok.set(u, v);
-            else if (u > v) ok.set(v, u);
+            if (u != v) {
+                // 오름차순 정렬
+                if (u < v) ok.set(u, v);
+                else ok.set(v, u);
 
+            }
             // IntPairWritable 로 Key 를 잡아 Edge 기준으로 Grouping 되도록 한다.
             context.write(ok, ov);
         }

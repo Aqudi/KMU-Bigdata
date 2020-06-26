@@ -1,7 +1,7 @@
 #!/bin/bash
+
 echo $1
 echo $2
 
+hadoop jar bd_finalproject_2.11-1.0p.jar bigdata.Task1 -Dmapreduce.job.reduces=1 $1 $21.out
 
-spark-submit --num-executors 10 --class bigdata.Task1 --master yarn \
-bd_finalproject_2.11-1.0p.jar  $1 $21.out

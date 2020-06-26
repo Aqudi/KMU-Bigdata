@@ -47,22 +47,20 @@ object Task3 {
     // 처음 Edge 를 불러왔을 때는 숫자 그대로의
     // 순서로 정렬을 해준다.
     val edges = sc.textFile(input)
+      .repartition(120)
       .map(_.split("\t"))
       .map(x => (x(0).toInt, x(1).toInt))
-      .repartition(120)
     val degress = sc.textFile(input2)
+      .repartition(120)
       .map(_.split("\t"))
       .map(x => (x(0).toInt, x(1).toInt))
-      .repartition(120)
 
-    val edgeWithDegree = degress
-      .join(edges)
-      .map { case (u, (ud, v)) => (v, (u, ud)) }
-      .join(degress, 120)
-      .map { case (v, ((u, ud), vd)) => ((u, ud), (v, vd)) }
-      .map { case (u, v) =>
-        if (u._2 < v._2 || (u._2 == v._2 && u._1 < v._1)) (u, v)
-        else (v, u)
+    val edgeWithDegree = edges
+      .join(degress)
+      .map { case (u, (v, ud)) => (v, (u, ud)) }
+      .join(degress)
+      .map { case (v, ((u, ud), vd)) =>
+        if (ud < vd || (ud == vd && u < v)) (u, v) else (v, u)
       }
 
     // 하둡에서 처럼 방출된 Edge 들을 Key 노드를 기준으로 묶어준 준뒤
@@ -76,17 +74,17 @@ object Task3 {
             i <- values.indices
             j <- i + 1 until values.size
           } yield {
-            // u < v 는 이미 edgeWithDegree 를 만들 때 처리했으므로
-            // 마지막 Triangle 을 세기 위해 edges(Task1에서 이미 정렬되있는 상태)
-            // 와 똑같이 숫자 그대로 순서로 정렬해준다.
-            val vw = (values(i)._1, values(j)._1)
-            if (vw._1 < vw._2) (vw, u._1)
-            else (vw.swap, u._1)
+            /* u < v 는 이미 edgeWithDegree 를 만들 때 처리했으므로
+            마지막 Triangle 을 세기 위해 edges(Task1에서 이미 정렬되있는 상태)
+            와 똑같이 숫자 그대로 순서로 정렬해준다. */
+            val vw = (values(i), values(j))
+            if (vw._1 < vw._2) (vw, u)
+            else (vw.swap, u)
           }
       }
-      .groupByKey()
     wedges_save
-      .map { case ((u, v), ws) => u + "\t" + v + "\t" + ws.mkString("\t") }
+      .groupByKey()
+      .map { case ((u, v), w) => u + "\t" + v + "\t" + w.mkString("\t") }
       .saveAsTextFile(temp)
     println("Step 1: End\n")
     println(s"wedges: ${wedges_save.count()}")
@@ -95,23 +93,19 @@ object Task3 {
     println("Step 2: Start")
     val wedges = sc.textFile(temp)
       .map(_.split("\t"))
-      .map { x => ((x(0).toInt, x(1).toInt), x.slice(2, x.length).toSeq) }
+      .map { x => ((x(0).toInt, x(1).toInt), x.slice(2, x.length).map(_.toInt).toSeq) }
 
     // Wedge 를 기준으로 노드들을 모아  Wedge 를 닫아 삼각형을 만들 수 있는지 확인한다.
-    val triangles = edges.map { case (u, v) => ((u, v), Seq(-1)) }
-      .join(wedges, 120)
+    val triangles = edges
+      .map { case (u, v) => ((u, v), Seq(-1)) }
+      .join(wedges)
       .flatMapValues(x => x._2)
-    // triangles.foreach(println)
-    println("Step 2: End\n")
+      .flatMap{ case ((u, v), w) => Seq((u, 1), (v, 1), (w, 1))}
 
-    println("Step 3: Start")
-    val counted = triangles
-      .flatMap(x => Seq(x._1._1, x._1._2, x._2))
-      .countByValue()
-    val counted_save = counted.map(_.productIterator.mkString("\t")).toSeq.sortBy(x => x.split("\t")(0).toInt)
-    sc.parallelize(counted_save).saveAsTextFile(output)
-    println("삼각형: " + triangles.count() + "개")
+    val counted = triangles.reduceByKey(_+_)
+    counted.map(x => x._1 + "\t" + x._2).coalesce(120).saveAsTextFile(output)
+
+    println("삼각형: " + triangles.count() / 3 + "개")
     println("Step 3: End\n")
   }
-
 }

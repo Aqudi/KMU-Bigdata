@@ -1,6 +1,6 @@
 name := "BD_FinalProject"
 
-version := "0.1"
+version := "1.0p"
 
 scalaVersion := "2.11.8"
 

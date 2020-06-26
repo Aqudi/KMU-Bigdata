@@ -20,7 +20,9 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.StringTokenizer;
 
+
 public class Task2 extends Configured implements Tool {
+    enum counter{ DEGREE }
 
     public static void main(String[] args) throws Exception {
         ToolRunner.run(new Task2(), args);
@@ -59,7 +61,7 @@ public class Task2 extends Configured implements Tool {
         FileOutputFormat.setOutputPath(job, output);
 
         job.waitForCompletion(true);
-
+        System.out.println("Degree 총합: " + job.getCounters ().findCounter(counter.DEGREE).getValue() / 2);
         return 0;
     }
 
@@ -67,6 +69,7 @@ public class Task2 extends Configured implements Tool {
 
         IntWritable ou = new IntWritable();
         IntWritable ov = new IntWritable();
+        IntWritable one = new IntWritable(1);
 
         @Override
         protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
@@ -79,8 +82,8 @@ public class Task2 extends Configured implements Tool {
             // System.out.println(ou.get() + " " + ov.get());
 
             // Undirected graph 이므로 u,v v,u 두 개의 튜플을 write 한다.
-            context.write(ou, ov);
-            context.write(ov, ou);
+            context.write(ou, one);
+            context.write(ov, one);
         }
     }
 
@@ -96,10 +99,11 @@ public class Task2 extends Configured implements Tool {
             int count = 0;
             // System.out.println(key.get());
             for (IntWritable value : values) {
-                count += 1;
+                count += value.get();
             }
 
             // vertex, count 순으로 write 해준다.
+            context.getCounter(counter.DEGREE).increment(count);
             ok.set(key.get(), count);
             context.write(ok, ov);
         }
